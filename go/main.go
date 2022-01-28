@@ -1084,6 +1084,7 @@ func getTrend(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	log.Print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
 	res := []TrendResponse{}
 
@@ -1098,6 +1099,8 @@ func getTrend(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 
+		log.Print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaammmmmmmmmmmmmmmmmmmm")
+
 		characterInfoIsuConditions := []*TrendCondition{}
 		characterWarningIsuConditions := []*TrendCondition{}
 		characterCriticalIsuConditions := []*TrendCondition{}
@@ -1111,6 +1114,7 @@ func getTrend(c echo.Context) error {
 				c.Logger().Errorf("db error: %v", err)
 				return c.NoContent(http.StatusInternalServerError)
 			}
+			log.Print("aaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaa")
 
 			if len(conditions) > 0 {
 				isuLastCondition := conditions[0]
