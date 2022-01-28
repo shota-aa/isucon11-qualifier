@@ -210,9 +210,9 @@ func init() {
 
 func main() {
 
-	go func() {
-		log.Fatal(http.ListenAndServe(":6060", nil))
-	}()
+	// go func() {
+	// 	log.Fatal(http.ListenAndServe(":6060", nil))
+	// }()
 
 	e := echo.New()
 	e.Debug = true
