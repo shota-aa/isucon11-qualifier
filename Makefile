@@ -1,4 +1,4 @@
-WEBHOOK_URL = "https://discordapp.com/api/webhooks/932996212699840553/YjmYpnNlaafG4bLN3vrU71NkjKSAg-orwD9iYSg0YxitnWYATegr2QCWDoPoYYu9Q6OG"
+WEBHOOK_URL = ""
 
 # ビルドして、サービスのリスタートを行う
 # リスタートを行わないと反映されないので注意
