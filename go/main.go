@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -16,7 +18,9 @@ import (
 	"time"
 
 	_ "net/http/pprof"
+
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -891,4 +895,375 @@ func isValidConditionFormat(conditionStr string) bool {
 
 func getIndex(c echo.Context) error {
 	return c.File(frontendContentsPath + "/index.html")
+}
+
+func getSession(r *http.Request) (*sessions.Session, error) {
+	session, err := sessionStore.Get(r, sessionName)
+	if err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
+func getUserIDFromSession(c echo.Context) (string, int, error) {
+	session, err := getSession(c.Request())
+	if err != nil {
+		return "", http.StatusInternalServerError, fmt.Errorf("failed to get session: %v", err)
+	}
+	_jiaUserID, ok := session.Values["jia_user_id"]
+	if !ok {
+		return "", http.StatusUnauthorized, fmt.Errorf("no session")
+	}
+
+	jiaUserID := _jiaUserID.(string)
+	var count int
+
+	err = db.Get(&count, "SELECT COUNT(*) FROM `user` WHERE `jia_user_id` = ?",
+		jiaUserID)
+	if err != nil {
+		return "", http.StatusInternalServerError, fmt.Errorf("db error: %v", err)
+	}
+
+	if count == 0 {
+		return "", http.StatusUnauthorized, fmt.Errorf("not found: user")
+	}
+
+	return jiaUserID, 0, nil
+}
+
+// POST /api/auth
+// サインアップ・サインイン
+func postAuthentication(c echo.Context) error {
+	reqJwt := strings.TrimPrefix(c.Request().Header.Get("Authorization"), "Bearer ")
+
+	token, err := jwt.Parse(reqJwt, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
+			return nil, jwt.NewValidationError(fmt.Sprintf("unexpected signing method: %v", token.Header["alg"]), jwt.ValidationErrorSignatureInvalid)
+		}
+		return jiaJWTSigningKey, nil
+	})
+	if err != nil {
+		switch err.(type) {
+		case *jwt.ValidationError:
+			return c.String(http.StatusForbidden, "forbidden")
+		default:
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		c.Logger().Errorf("invalid JWT payload")
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	jiaUserIDVar, ok := claims["jia_user_id"]
+	if !ok {
+		return c.String(http.StatusBadRequest, "invalid JWT payload")
+	}
+	jiaUserID, ok := jiaUserIDVar.(string)
+	if !ok {
+		return c.String(http.StatusBadRequest, "invalid JWT payload")
+	}
+
+	_, err = db.Exec("INSERT IGNORE INTO user (`jia_user_id`) VALUES (?)", jiaUserID)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	session, err := getSession(c.Request())
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	session.Values["jia_user_id"] = jiaUserID
+	err = session.Save(c.Request(), c.Response())
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
+// POST /api/signout
+// サインアウト
+func postSignout(c echo.Context) error {
+	_, errStatusCode, err := getUserIDFromSession(c)
+	if err != nil {
+		if errStatusCode == http.StatusUnauthorized {
+			return c.String(http.StatusUnauthorized, "you are not signed in")
+		}
+
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	session, err := getSession(c.Request())
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	session.Options = &sessions.Options{MaxAge: -1, Path: "/"}
+	err = session.Save(c.Request(), c.Response())
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return c.NoContent(http.StatusOK)
+}
+
+// POST /api/isu
+// ISUを登録
+func postIsu(c echo.Context) error {
+	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
+	if err != nil {
+		if errStatusCode == http.StatusUnauthorized {
+			return c.String(http.StatusUnauthorized, "you are not signed in")
+		}
+
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	useDefaultImage := false
+
+	jiaIsuUUID := c.FormValue("jia_isu_uuid")
+	isuName := c.FormValue("isu_name")
+	fh, err := c.FormFile("image")
+	if err != nil {
+		if !errors.Is(err, http.ErrMissingFile) {
+			return c.String(http.StatusBadRequest, "bad format: icon")
+		}
+		useDefaultImage = true
+	}
+
+	var image []byte
+
+	if useDefaultImage {
+		image, err = ioutil.ReadFile(defaultIconFilePath)
+		if err != nil {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+	} else {
+		file, err := fh.Open()
+		if err != nil {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		defer file.Close()
+
+		image, err = ioutil.ReadAll(file)
+		if err != nil {
+			c.Logger().Error(err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+	}
+
+	tx, err := db.Beginx()
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("INSERT INTO `isu`"+
+		"	(`jia_isu_uuid`, `name`, `image`, `jia_user_id`) VALUES (?, ?, ?, ?)",
+		jiaIsuUUID, isuName, image, jiaUserID)
+	if err != nil {
+		mysqlErr, ok := err.(*mysql.MySQLError)
+
+		if ok && mysqlErr.Number == uint16(mysqlErrNumDuplicateEntry) {
+			return c.String(http.StatusConflict, "duplicated: isu")
+		}
+
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	targetURL := getJIAServiceURL(tx) + "/api/activate"
+	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
+	bodyJSON, err := json.Marshal(body)
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	reqJIA, err := http.NewRequest(http.MethodPost, targetURL, bytes.NewBuffer(bodyJSON))
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	reqJIA.Header.Set("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(reqJIA)
+	if err != nil {
+		c.Logger().Errorf("failed to request to JIAService: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	defer res.Body.Close()
+
+	resBody, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	if res.StatusCode != http.StatusAccepted {
+		c.Logger().Errorf("JIAService returned error: status code %v, message: %v", res.StatusCode, string(resBody))
+		return c.String(res.StatusCode, "JIAService returned error")
+	}
+
+	var isuFromJIA IsuFromJIA
+	err = json.Unmarshal(resBody, &isuFromJIA)
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	_, err = tx.Exec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	var isu Isu
+	err = tx.Get(
+		&isu,
+		"SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+		jiaUserID, jiaIsuUUID)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return c.JSON(http.StatusCreated, isu)
+}
+
+// GET /api/isu/:jia_isu_uuid
+// ISUの情報を取得
+func getIsuID(c echo.Context) error {
+	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
+	if err != nil {
+		if errStatusCode == http.StatusUnauthorized {
+			return c.String(http.StatusUnauthorized, "you are not signed in")
+		}
+
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	jiaIsuUUID := c.Param("jia_isu_uuid")
+
+	var res Isu
+	err = db.Get(&res, "SELECT * FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+		jiaUserID, jiaIsuUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.String(http.StatusNotFound, "not found: isu")
+		}
+
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return c.JSON(http.StatusOK, res)
+}
+
+// GET /api/isu/:jia_isu_uuid/icon
+// ISUのアイコンを取得
+func getIsuIcon(c echo.Context) error {
+	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
+	if err != nil {
+		if errStatusCode == http.StatusUnauthorized {
+			return c.String(http.StatusUnauthorized, "you are not signed in")
+		}
+
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	jiaIsuUUID := c.Param("jia_isu_uuid")
+
+	var image []byte
+	err = db.Get(&image, "SELECT `image` FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+		jiaUserID, jiaIsuUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.String(http.StatusNotFound, "not found: isu")
+		}
+
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return c.Blob(http.StatusOK, "", image)
+}
+
+// GET /api/isu/:jia_isu_uuid/graph
+// ISUのコンディショングラフ描画のための情報を取得
+func getIsuGraph(c echo.Context) error {
+	jiaUserID, errStatusCode, err := getUserIDFromSession(c)
+	if err != nil {
+		if errStatusCode == http.StatusUnauthorized {
+			return c.String(http.StatusUnauthorized, "you are not signed in")
+		}
+
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	jiaIsuUUID := c.Param("jia_isu_uuid")
+	datetimeStr := c.QueryParam("datetime")
+	if datetimeStr == "" {
+		return c.String(http.StatusBadRequest, "missing: datetime")
+	}
+	datetimeInt64, err := strconv.ParseInt(datetimeStr, 10, 64)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "bad format: datetime")
+	}
+	date := time.Unix(datetimeInt64, 0).Truncate(time.Hour)
+
+	tx, err := db.Beginx()
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	defer tx.Rollback()
+
+	var count int
+	err = tx.Get(&count, "SELECT COUNT(*) FROM `isu` WHERE `jia_user_id` = ? AND `jia_isu_uuid` = ?",
+		jiaUserID, jiaIsuUUID)
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	if count == 0 {
+		return c.String(http.StatusNotFound, "not found: isu")
+	}
+
+	res, err := generateIsuGraphResponse(tx, jiaIsuUUID, date)
+	if err != nil {
+		c.Logger().Error(err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		c.Logger().Errorf("db error: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	return c.JSON(http.StatusOK, res)
 }
