@@ -15,7 +15,7 @@ git-pull:
 	git pull
 
 .PHONY: reset-ngx
-reset-nginx:
+reset-ngx:
 	sudo rm /var/log/nginx/access-with_time.log
 	sudo rm /var/log/nginx/access-ltsv.log
 	sudo nginx -t
