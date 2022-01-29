@@ -11,6 +11,10 @@ GIT_USERNAME = ISUCON-Server
 pre-bench:
 	git-pull reset-ngx reset-mysql build
 
+.PHONY: git-pull
+git-pull:
+	git pull
+
 .PHONY: reset-ngx
 restart-nginx:
 	sudo rm /var/log/nginx/access-with_time.log
@@ -44,7 +48,7 @@ restart-mysql:
 	sudo systemctl restart mysqld
 	sudo systemctl restart mariadb
 
-.PHONY: slow-log
+.PHONY: slow
 slow-log: 
 	sudo mysqldumpslow -s t -t 10 "$(SLOW_LOG)"
 
