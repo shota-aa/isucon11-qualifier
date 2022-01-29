@@ -239,7 +239,7 @@ func main() {
 
 	mySQLConnectionData = NewMySQLConnectionEnv()
 
-        var err error
+  var err error
 	db, err = mySQLConnectionData.ConnectDB()
 	if err != nil {
 		e.Logger.Fatalf("failed to connect db: %v", err)
@@ -307,12 +307,13 @@ func getJIAServiceURL(tx *sqlx.Tx) string {
 // POST /initialize
 // サービスを初期化
 func postInitialize(c echo.Context) error {
-	var request InitializeRequest
-	err := c.Bind(&request)
-	if err != nil {
-		return c.String(http.StatusBadRequest, "bad request body")
-	}
+	// var request InitializeRequest
+	// err := c.Bind(&request)
+	// if err != nil {
+	// 	return c.String(http.StatusBadRequest, "bad request body")
+	// }
 
+	var err error
 	cmd := exec.Command("../sql/init.sh")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stderr
@@ -325,7 +326,7 @@ func postInitialize(c echo.Context) error {
 	_, err = db.Exec(
 		"INSERT INTO `isu_association_config` (`name`, `url`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `url` = VALUES(`url`)",
 		"jia_service_url",
-		request.JIAServiceURL,
+		"http://127.0.0.1:5000",
 	)
 	if err != nil {
 		c.Logger().Errorf("db error : %v", err)
