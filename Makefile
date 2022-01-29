@@ -7,7 +7,11 @@ ALP_LOG = /var/log/nginx/access-ltsv.log
 GIT_EMAIL = git@github.com
 GIT_USERNAME = ISUCON-Server
 
-.PHONY: restart-nginx
+.PHONY: pre-bench
+pre-bench:
+	git-pull reset-ngx reset-mysql build
+
+.PHONY: reset-ngx
 restart-nginx:
 	sudo rm /var/log/nginx/access-with_time.log
 	sudo rm /var/log/nginx/access-ltsv.log
@@ -33,7 +37,7 @@ alp:
 alp-sum:
 	alp -f "$(ALP_LOG)" --sum -r
 
-.PHONY: restart-mysql
+.PHONY: reset-mysql
 restart-mysql:
 	sudo rm -f $(SLOW_LOG)
 	sudo systemctl restart mysql
