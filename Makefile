@@ -1,4 +1,7 @@
 WEBHOOK_URL = ""
+SLOW_LOG = /var/log/mysql/mariadb-slow.log
+KATARIBE_LOG = /var/log/nginx/access-with_time.log
+ALP_LOG = /var/log/nginx/access-ltsv.log
 
 # Git関連変数
 GIT_EMAIL = git@github.com
@@ -11,12 +14,9 @@ restart-nginx:
 	sudo nginx -t
 	sudo systemctl restart nginx
 
-.PHONY: cat-kataribe
+.PHONY: kataribe
 cat-kataribe:
-	sudo cat /var/log/nginx/access-with_time.log | kataribe
-
-# alp
-ALP_SORT = sum
+	sudo cat "$(KATARIBE_LOG)" | kataribe
 
 .PHONY: set-alp
 set-alp:
@@ -27,7 +27,22 @@ set-alp:
 
 .PHONY: alp
 alp:
-	alp -f /var/log/nginx/access-ltsv.log --"$(ALP_SORT)"
+	alp -f "$(ALP_LOG)" --avg -r
+
+.PHONY: alp-sum
+alp-sum:
+	alp -f "$(ALP_LOG)" --sum -r
+
+.PHONY: restart-mysql
+restart-mysql:
+	sudo rm -f $(SLOW_LOG)
+	sudo systemctl restart mysql
+	sudo systemctl restart mysqld
+	sudo systemctl restart mariadb
+
+.PHONY: slow-log
+slow-log: 
+	sudo mysqldumpslow -s t -t 10 "$(SLOW_LOG)"
 
 # ビルドして、サービスのリスタートを行う
 # リスタートを行わないと反映されないので注意
