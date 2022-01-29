@@ -11,11 +11,12 @@ set-alp:
 	unzip alp_linux_amd64.zip
 	sudo mv alp /usr/local/bin/alp
 
-.PHONY: reset-log
-reset-log:
+.PHONY: restart-nginx
+restart-nginx:
 	sudo rm /var/log/nginx/access.log
+	sudo nginx -t
 	sudo touch /var/log/nginx/access.log
-	sudo systemctl reload nginx
+	sudo systemctl restart nginx
 
 # ビルドして、サービスのリスタートを行う
 # リスタートを行わないと反映されないので注意
