@@ -8,8 +8,7 @@ GIT_EMAIL = git@github.com
 GIT_USERNAME = ISUCON-Server
 
 .PHONY: pre-bench
-pre-bench:
-	git-pull reset-ngx reset-mysql build
+pre-bench: git-pull reset-ngx reset-mysql build
 
 .PHONY: git-pull
 git-pull:
