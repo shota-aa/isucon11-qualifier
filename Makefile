@@ -4,6 +4,20 @@ WEBHOOK_URL = ""
 GIT_EMAIL = git@github.com
 GIT_USERNAME = ISUCON-Server
 
+.PHONY: restart-nginx
+restart-nginx:
+	sudo rm /var/log/nginx/access-with_time.log
+	sudo rm /var/log/nginx/access-ltsv.log
+	sudo nginx -t
+	sudo systemctl restart nginx
+
+.PHONY: cat-kataribe
+cat-kataribe:
+	sudo cat /var/log/nginx/access-with_time.log | kataribe
+
+# alp
+ALP_SORT = sum
+
 .PHONY: set-alp
 set-alp:
 	wget https://github.com/tkuchiki/alp/releases/download/v0.4.0/alp_linux_amd64.zip
@@ -11,12 +25,9 @@ set-alp:
 	unzip alp_linux_amd64.zip
 	sudo mv alp /usr/local/bin/alp
 
-.PHONY: restart-nginx
-restart-nginx:
-	sudo rm /var/log/nginx/access-with_time.log
-	sudo rm /var/log/nginx/access-ltsv.log
-	sudo nginx -t
-	sudo systemctl restart nginx
+.PHONY: alp
+alp:
+	alp -f /var/log/nginx/access-ltsv.log --"$(ALP_SORT)"
 
 # ビルドして、サービスのリスタートを行う
 # リスタートを行わないと反映されないので注意
