@@ -4,6 +4,19 @@ WEBHOOK_URL = ""
 GIT_EMAIL = git@github.com
 GIT_USERNAME = ISUCON-Server
 
+.PHONY: set-alp
+set-alp:
+	wget https://github.com/tkuchiki/alp/releases/download/v0.4.0/alp_linux_amd64.zip
+	sudo apt install unzip
+	unzip alp_linux_amd64.zip
+	sudo mv alp /usr/local/bin/alp
+
+.PHONY: reset-log
+reset-log:
+	sudo rm /var/log/nginx/access.log
+	sudo touch /var/log/nginx/access.log
+	sudo systemctl reload nginx
+
 # ビルドして、サービスのリスタートを行う
 # リスタートを行わないと反映されないので注意
 .PHONY: build
