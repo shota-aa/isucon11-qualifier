@@ -597,7 +597,7 @@ func postIsu(c echo.Context) error {
 
 	log.Print("44444444444444333333333333333222222222222222222111111111111111111111111111111111111111111")
 	// targetURL := getJIAServiceURL(tx) + "/api/activate"
-	targetURL := "http://127.0.0.1:5000" + "/api/activate"
+	targetURL := "http://127.0.0.1:4999" + "/api/activate"
 	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
