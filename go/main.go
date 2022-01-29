@@ -532,6 +532,7 @@ func postIsu(c echo.Context) error {
 			return c.String(http.StatusUnauthorized, "you are not signed in")
 		}
 
+		log.Print("111111111111111111111111111111111111111111")
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -548,6 +549,7 @@ func postIsu(c echo.Context) error {
 		useDefaultImage = true
 	}
 
+	log.Print("222222222222222222111111111111111111111111111111111111111111")
 	var image []byte
 
 	if useDefaultImage {
@@ -571,6 +573,7 @@ func postIsu(c echo.Context) error {
 		}
 	}
 
+	log.Print("333333333333333222222222222222222111111111111111111111111111111111111111111")
 	tx, err := db.Beginx()
 	if err != nil {
 		c.Logger().Errorf("db error: %v", err)
@@ -592,6 +595,7 @@ func postIsu(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	log.Print("44444444444444333333333333333222222222222222222111111111111111111111111111111111111111111")
 	// targetURL := getJIAServiceURL(tx) + "/api/activate"
 	targetURL := "http://127.0.0.1:5000" + "/api/activate"
 	body := JIAServiceRequest{postIsuConditionTargetBaseURL, jiaIsuUUID}
@@ -632,6 +636,7 @@ func postIsu(c echo.Context) error {
 		c.Logger().Error(err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+	log.Print("5555555544444444444444333333333333333222222222222222222111111111111111111111111111111111111111111")
 
 	_, err = tx.Exec("UPDATE `isu` SET `character` = ? WHERE  `jia_isu_uuid` = ?", isuFromJIA.Character, jiaIsuUUID)
 	if err != nil {
