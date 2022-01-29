@@ -13,9 +13,9 @@ set-alp:
 
 .PHONY: restart-nginx
 restart-nginx:
-	sudo rm /var/log/nginx/access.log
+	sudo rm /var/log/nginx/access-with_time.log
+	sudo rm /var/log/nginx/access-ltsv.log
 	sudo nginx -t
-	sudo touch /var/log/nginx/access.log
 	sudo systemctl restart nginx
 
 # ビルドして、サービスのリスタートを行う
