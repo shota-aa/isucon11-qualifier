@@ -15,7 +15,7 @@ git-pull:
 	git pull
 
 .PHONY: reset-ngx
-restart-nginx:
+reset-nginx:
 	sudo rm /var/log/nginx/access-with_time.log
 	sudo rm /var/log/nginx/access-ltsv.log
 	sudo nginx -t
@@ -41,14 +41,14 @@ alp-sum:
 	alp -f "$(ALP_LOG)" --sum -r
 
 .PHONY: reset-mysql
-restart-mysql:
+reset-mysql:
 	sudo rm -f $(SLOW_LOG)
 	sudo systemctl restart mysql
 	sudo systemctl restart mysqld
 	sudo systemctl restart mariadb
 
 .PHONY: slow
-slow-log: 
+slow: 
 	sudo mysqldumpslow -s t -t 10 "$(SLOW_LOG)"
 
 # ビルドして、サービスのリスタートを行う
