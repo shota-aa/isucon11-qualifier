@@ -11,6 +11,32 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type GraphResponse struct {
+	StartAt             int64           `json:"start_at"`
+	EndAt               int64           `json:"end_at"`
+	Data                *GraphDataPoint `json:"data"`
+	ConditionTimestamps []int64         `json:"condition_timestamps"`
+}
+
+type GraphDataPoint struct {
+	Score      int                  `json:"score"`
+	Percentage ConditionsPercentage `json:"percentage"`
+}
+
+type ConditionsPercentage struct {
+	Sitting      int `json:"sitting"`
+	IsBroken     int `json:"is_broken"`
+	IsDirty      int `json:"is_dirty"`
+	IsOverweight int `json:"is_overweight"`
+}
+
+type GraphDataPointWithInfo struct {
+	JIAIsuUUID          string
+	StartAt             time.Time
+	Data                GraphDataPoint
+	ConditionTimestamps []int64
+}
+
 // グラフのデータ点を一日分生成
 func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Time) ([]GraphResponse, error) {
 	dataPoints := []GraphDataPointWithInfo{}

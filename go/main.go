@@ -95,32 +95,6 @@ type GetMeResponse struct {
 	JIAUserID string `json:"jia_user_id"`
 }
 
-type GraphResponse struct {
-	StartAt             int64           `json:"start_at"`
-	EndAt               int64           `json:"end_at"`
-	Data                *GraphDataPoint `json:"data"`
-	ConditionTimestamps []int64         `json:"condition_timestamps"`
-}
-
-type GraphDataPoint struct {
-	Score      int                  `json:"score"`
-	Percentage ConditionsPercentage `json:"percentage"`
-}
-
-type ConditionsPercentage struct {
-	Sitting      int `json:"sitting"`
-	IsBroken     int `json:"is_broken"`
-	IsDirty      int `json:"is_dirty"`
-	IsOverweight int `json:"is_overweight"`
-}
-
-type GraphDataPointWithInfo struct {
-	JIAIsuUUID          string
-	StartAt             time.Time
-	Data                GraphDataPoint
-	ConditionTimestamps []int64
-}
-
 type TrendResponse struct {
 	Character string            `json:"character"`
 	Info      []*TrendCondition `json:"info"`
