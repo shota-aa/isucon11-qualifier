@@ -184,8 +184,8 @@ func getTrend(c echo.Context) error {
 		characterWarningIsuConditions := []*TrendCondition{}
 		characterCriticalIsuConditions := []*TrendCondition{}
 		for _, isu := range isuList {
-			lastCondition := IsuCondition{}
-			err = db.Get(&lastCondition,
+			conditions := []IsuCondition{}
+			err = db.Select(&conditions,
 				"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY timestamp DESC LIMIT 1",
 				isu.JIAIsuUUID,
 			)
@@ -195,16 +195,16 @@ func getTrend(c echo.Context) error {
 			}
 			log.Print("aaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaa")
 
-			// if len(conditions) > 0 {
-				// isuLastCondition := conditions[0]
-				conditionLevel, err := calculateConditionLevel(lastCondition.Condition)
+			if len(conditions) > 0 {
+				isuLastCondition := conditions[0]
+				conditionLevel, err := calculateConditionLevel(isuLastCondition.Condition)
 				if err != nil {
 					c.Logger().Error(err)
 					return c.NoContent(http.StatusInternalServerError)
 				}
 				trendCondition := TrendCondition{
 					ID:        isu.ID,
-					Timestamp: lastCondition.Timestamp.Unix(),
+					Timestamp: isuLastCondition.Timestamp.Unix(),
 				}
 				switch conditionLevel {
 				case "info":
@@ -214,7 +214,7 @@ func getTrend(c echo.Context) error {
 				case "critical":
 					characterCriticalIsuConditions = append(characterCriticalIsuConditions, &trendCondition)
 				}
-			//}
+			}
 
 		}
 
