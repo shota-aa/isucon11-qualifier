@@ -22,7 +22,7 @@ type IsuCondition struct {
 	Timestamp  time.Time `db:"timestamp"`
 	IsSitting  bool      `db:"is_sitting"`
 	Condition  string    `db:"condition"`
-	Level      int       `db:"level"`
+	Level      string    `db:"level"`
 	Message    string    `db:"message"`
 	CreatedAt  time.Time `db:"created_at"`
 }
@@ -315,22 +315,10 @@ func postIsuCondition(c echo.Context) error {
 			return c.String(http.StatusBadRequest, "bad request body")
 		}
 
-		levelStr, err := calculateConditionLevel(cond.Condition)
+		level, err := calculateConditionLevel(cond.Condition)
 		if err != nil {
 			c.Logger().Error(err)
 			return c.NoContent(http.StatusInternalServerError)
-		}
-
-		var levelInt int
-		switch levelStr {
-		case conditionLevelInfo:
-			levelInt = 0
-		case conditionLevelWarning:
-			levelInt = 1
-		case conditionLevelCritical:
-			levelInt = 2
-		default:
-			return c.String(http.StatusInternalServerError, "unexpected condition level")
 		}
 
 		rows = append(rows, IsuCondition{
@@ -338,7 +326,7 @@ func postIsuCondition(c echo.Context) error {
 			Timestamp:  timestamp,
 			IsSitting:  cond.IsSitting,
 			Condition:  cond.Condition,
-			Level:      levelInt,
+			Level:      level,
 			Message:    cond.Message,
 		})
 	}
