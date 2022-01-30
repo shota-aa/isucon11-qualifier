@@ -45,17 +45,21 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 	var startTimeInThisHour time.Time
 	var condition IsuCondition
 
+	// nextGraphDate := graphDate.Add(time.Hour *24)
 	rows, err := tx.Queryx("SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ? ORDER BY `timestamp` ASC", jiaIsuUUID)
 	if err != nil {
 		return nil, fmt.Errorf("db error: %v", err)
 	}
 
+	//データは一時間ごとに一回送られてきて、それ一個ずつの処理が以下
 	for rows.Next() {
 		err = rows.StructScan(&condition)
 		if err != nil {
 			return nil, err
 		}
 
+		// まず一時間以下を切り捨てされる。
+		//そのデータを使ってconditionsInThisHourとtimestampsInThisHourを作ってる
 		truncatedConditionTime := condition.Timestamp.Truncate(time.Hour)
 		if truncatedConditionTime != startTimeInThisHour {
 			if len(conditionsInThisHour) > 0 {
@@ -80,6 +84,7 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 		timestampsInThisHour = append(timestampsInThisHour, condition.Timestamp.Unix())
 	}
 
+	//その時間のdataとisuIDとstartat timestamp(切り捨て前のスタンプ)を一つの構造体へ
 	if len(conditionsInThisHour) > 0 {
 		data, err := calculateGraphDataPoint(conditionsInThisHour)
 		if err != nil {
@@ -97,6 +102,8 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 	endTime := graphDate.Add(time.Hour * 24)
 	startIndex := len(dataPoints)
 	endNextIndex := len(dataPoints)
+	//この日の始まりがdatapointsの何番目の要素かを判定してstartIndexとする
+	//この日の終わりの次のindexがdatapointsの何番目の要素かを判定してendIndexとする
 	for i, graph := range dataPoints {
 		if startIndex == len(dataPoints) && !graph.StartAt.Before(graphDate) {
 			startIndex = i
@@ -106,11 +113,13 @@ func generateIsuGraphResponse(tx *sqlx.Tx, jiaIsuUUID string, graphDate time.Tim
 		}
 	}
 
+	//この日のやつだけにしぼる
 	filteredDataPoints := []GraphDataPointWithInfo{}
 	if startIndex < endNextIndex {
 		filteredDataPoints = dataPoints[startIndex:endNextIndex]
 	}
 
+	//わからんけどちゃんと返せるように整形してそう
 	responseList := []GraphResponse{}
 	index := 0
 	thisTime := graphDate
