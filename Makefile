@@ -3,6 +3,8 @@ SLOW_LOG = /var/log/mysql/mariadb-slow.log
 KATARIBE_LOG = /var/log/nginx/access-with_time.log
 ALP_LOG = /var/log/nginx/access-ltsv.log
 
+GO_SERVICE_NAME="isucondition.go"
+
 # Git関連変数
 GIT_EMAIL = git@github.com
 GIT_USERNAME = ISUCON-Server
@@ -70,3 +72,7 @@ git-setuser:
 send-pprof:
 	go tool pprof -png -output /home/isucon/webapp/profile.png http://localhost:6060/debug/pprof/profile?seconds=60
 	curl -X POST -F img=@/home/isucon/webapp/profile.png $(WEBHOOK_URL)
+
+.PHONY: journal
+journal:
+	journalctl -u "$(GO_SERVICE_NAME)".service
