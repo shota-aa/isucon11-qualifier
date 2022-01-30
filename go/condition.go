@@ -13,7 +13,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/log"
+	//"github.com/labstack/gommon/log"
 )
 
 type IsuCondition struct {
@@ -208,7 +208,7 @@ func getTrend(c echo.Context) error {
 		c.Logger().Errorf("db error: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	log.Print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	//log.Print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
 	res := []TrendResponse{}
 
@@ -223,7 +223,7 @@ func getTrend(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 
-		log.Print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaammmmmmmmmmmmmmmmmmmm")
+		//log.Print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaammmmmmmmmmmmmmmmmmmm")
 
 		characterInfoIsuConditions := []*TrendCondition{}
 		characterWarningIsuConditions := []*TrendCondition{}
@@ -238,7 +238,7 @@ func getTrend(c echo.Context) error {
 				c.Logger().Errorf("db error: %v", err)
 				return c.NoContent(http.StatusInternalServerError)
 			}
-			log.Print("aaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaa")
+			//log.Print("aaaaaaaaaaaahhhhhhhhhhhhhhhhhhhhhhhaaaaaaaaaaaaaaaaaa")
 
 			if len(conditions) > 0 {
 				isuLastCondition := conditions[0]
@@ -290,7 +290,7 @@ func postIsuCondition(c echo.Context) error {
 	// TODO: 一定割合リクエストを落としてしのぐようにしたが、本来は全量さばけるようにすべき
 	dropProbability := 0.9
 	if rand.Float64() <= dropProbability {
-		c.Logger().Warnf("drop post isu condition request")
+		//c.Logger().Warnf("drop post isu condition request")
 		return c.NoContent(http.StatusAccepted)
 	}
 
