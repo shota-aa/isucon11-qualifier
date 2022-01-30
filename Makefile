@@ -3,7 +3,7 @@ SLOW_LOG = /var/log/mysql/mariadb-slow.log
 KATARIBE_LOG = /var/log/nginx/access-with_time.log
 ALP_LOG = /var/log/nginx/access-ltsv.log
 
-GO_SERVICE_NAME="isucondition.go"
+GO_SERVICE_NAME = isucondition.go
 
 # Git関連変数
 GIT_EMAIL = git@github.com
@@ -75,4 +75,4 @@ send-pprof:
 
 .PHONY: journal
 journal:
-	journalctl -u "$(GO_SERVICE_NAME)".service
+	journalctl -u $(GO_SERVICE_NAME).service
