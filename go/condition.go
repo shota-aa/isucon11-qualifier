@@ -115,20 +115,27 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 	conditions := []IsuCondition{}
 	var err error
 
+	levelQuery := []string{}
+	for key := range conditionLevel {
+		levelQuery = append(levelQuery, key)
+	}
+
 	if startTime.IsZero() {
 		err = db.Select(&conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
-				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime,
+				" AND `level` IN (?)"+
+				"	ORDER BY `timestamp` DESC LIMIT ?",
+			jiaIsuUUID, endTime, levelQuery, limit,
 		)
 	} else {
 		err = db.Select(&conditions,
 			"SELECT * FROM `isu_condition` WHERE `jia_isu_uuid` = ?"+
 				"	AND `timestamp` < ?"+
 				"	AND ? <= `timestamp`"+
-				"	ORDER BY `timestamp` DESC",
-			jiaIsuUUID, endTime, startTime,
+				" AND `level` IN (?)"+
+				"	ORDER BY `timestamp` DESC LIMIT ?",
+			jiaIsuUUID, endTime, startTime, levelQuery, limit,
 		)
 	}
 	if err != nil {
@@ -137,28 +144,28 @@ func getIsuConditionsFromDB(db *sqlx.DB, jiaIsuUUID string, endTime time.Time, c
 
 	conditionsResponse := []*GetIsuConditionResponse{}
 	for _, c := range conditions {
-		cLevel, err := calculateConditionLevel(c.Condition)
-		if err != nil {
-			continue
-		}
+		// cLevel, err := calculateConditionLevel(c.Condition)
+		// if err != nil {
+		// 	continue
+		// }
 
-		if _, ok := conditionLevel[cLevel]; ok {
+		// if _, ok := conditionLevel[cLevel]; ok {
 			data := GetIsuConditionResponse{
 				JIAIsuUUID:     c.JIAIsuUUID,
 				IsuName:        isuName,
 				Timestamp:      c.Timestamp.Unix(),
 				IsSitting:      c.IsSitting,
 				Condition:      c.Condition,
-				ConditionLevel: cLevel,
+				ConditionLevel: c.Level,
 				Message:        c.Message,
 			}
 			conditionsResponse = append(conditionsResponse, &data)
-		}
+		// }
 	}
 
-	if len(conditionsResponse) > limit {
-		conditionsResponse = conditionsResponse[:limit]
-	}
+	// if len(conditionsResponse) > limit {
+	// 	conditionsResponse = conditionsResponse[:limit]
+	// }
 
 	return conditionsResponse, nil
 }
