@@ -16,6 +16,33 @@ import (
 	"github.com/labstack/gommon/log"
 )
 
+type IsuCondition struct {
+	ID         int       `db:"id"`
+	JIAIsuUUID string    `db:"jia_isu_uuid"`
+	Timestamp  time.Time `db:"timestamp"`
+	IsSitting  bool      `db:"is_sitting"`
+	Condition  string    `db:"condition"`
+	Message    string    `db:"message"`
+	CreatedAt  time.Time `db:"created_at"`
+}
+
+type GetIsuConditionResponse struct {
+	JIAIsuUUID     string `json:"jia_isu_uuid"`
+	IsuName        string `json:"isu_name"`
+	Timestamp      int64  `json:"timestamp"`
+	IsSitting      bool   `json:"is_sitting"`
+	Condition      string `json:"condition"`
+	ConditionLevel string `json:"condition_level"`
+	Message        string `json:"message"`
+}
+
+type PostIsuConditionRequest struct {
+	IsSitting bool   `json:"is_sitting"`
+	Condition string `json:"condition"`
+	Message   string `json:"message"`
+	Timestamp int64  `json:"timestamp"`
+}
+
 // GET /api/condition/:jia_isu_uuid
 // ISUのコンディションを取得
 func getIsuConditions(c echo.Context) error {

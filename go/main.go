@@ -75,16 +75,6 @@ type GetIsuListResponse struct {
 	LatestIsuCondition *GetIsuConditionResponse `json:"latest_isu_condition"`
 }
 
-type IsuCondition struct {
-	ID         int       `db:"id"`
-	JIAIsuUUID string    `db:"jia_isu_uuid"`
-	Timestamp  time.Time `db:"timestamp"`
-	IsSitting  bool      `db:"is_sitting"`
-	Condition  string    `db:"condition"`
-	Message    string    `db:"message"`
-	CreatedAt  time.Time `db:"created_at"`
-}
-
 type MySQLConnectionEnv struct {
 	Host     string
 	Port     string
@@ -131,16 +121,6 @@ type GraphDataPointWithInfo struct {
 	ConditionTimestamps []int64
 }
 
-type GetIsuConditionResponse struct {
-	JIAIsuUUID     string `json:"jia_isu_uuid"`
-	IsuName        string `json:"isu_name"`
-	Timestamp      int64  `json:"timestamp"`
-	IsSitting      bool   `json:"is_sitting"`
-	Condition      string `json:"condition"`
-	ConditionLevel string `json:"condition_level"`
-	Message        string `json:"message"`
-}
-
 type TrendResponse struct {
 	Character string            `json:"character"`
 	Info      []*TrendCondition `json:"info"`
@@ -151,13 +131,6 @@ type TrendResponse struct {
 type TrendCondition struct {
 	ID        int   `json:"isu_id"`
 	Timestamp int64 `json:"timestamp"`
-}
-
-type PostIsuConditionRequest struct {
-	IsSitting bool   `json:"is_sitting"`
-	Condition string `json:"condition"`
-	Message   string `json:"message"`
-	Timestamp int64  `json:"timestamp"`
 }
 
 type JIAServiceRequest struct {
