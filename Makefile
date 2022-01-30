@@ -24,7 +24,7 @@ reset-ngx:
 	sudo systemctl restart nginx
 
 .PHONY: kataribe
-cat-kataribe:
+kataribe:
 	sudo cat "$(KATARIBE_LOG)" | kataribe
 
 .PHONY: set-alp
